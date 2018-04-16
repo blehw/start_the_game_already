@@ -137,7 +137,7 @@ public class HW2Player extends SampleGamer {
 	 */
 	@Override
 	public String getName() {
-		return "ballin";
+		return "player";
 	}
 
 
