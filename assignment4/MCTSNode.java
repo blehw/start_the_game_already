@@ -37,13 +37,15 @@ public class MCTSNode {
 
 
 	public MCTSNode selectChild(MCTSNode node) {
-		int score = 0;
+		double score = 0;
 		MCTSNode select = node.children.get(0);
 		for(MCTSNode child : node.children) {
 			if (child.visits == 0) {
 				return child;
 			}
-			if (selectfn(child) > score) {
+			double selectVal = selectfn(child);
+			if (selectVal > score) {
+				score = selectVal;
 				select = child;
 			}
 		}
