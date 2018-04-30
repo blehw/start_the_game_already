@@ -13,9 +13,11 @@ public class MCTSNode {
 	public MachineState  state;
 	public ArrayList<MCTSNode> children;
 	public MCTSNode parent;
+	private final int C = 20;
 
 	public MCTSNode(MCTSNode parent) {
 	      this.parent = parent;
+	      this.children = new ArrayList<MCTSNode>();
 	      this.visits = 0;
 	      this.score = 0;
 	    }
@@ -23,16 +25,31 @@ public class MCTSNode {
 
 	public MCTSNode(MCTSNode parent, Move move, MachineState  state) {
 	      this.parent = parent;
+	      this.children = new ArrayList<MCTSNode>();
 	      this.visits = 0;
 	      this.move = move;
 	      this.state = state;
 	      this.score = 0;
+
 	    }
 
 	private double selectfn(MCTSNode node) {
 		return node.score/node.visits
-		+ Math.sqrt(2*Math.log(node.parent.visits)/node.visits);
+		+ C * Math.sqrt(2*Math.log(node.parent.visits)/node.visits);
 
+	}
+
+
+	public MCTSNode bestChild(MCTSNode node) {
+		double utility = 0;
+		MCTSNode best = node;
+		for (MCTSNode child: node.children) {
+			if (child.score > utility) {
+				utility = child.score;
+				best = child;
+			}
+		}
+		return best;
 	}
 
 

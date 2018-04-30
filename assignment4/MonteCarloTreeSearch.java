@@ -16,62 +16,45 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class MonteCarloTreeSearch extends SampleGamer {
 	final int probes = 4;
 	final int maxLevel = 1;
+	private long timeLimit;
 
-	private MCTSNode root = new MCTSNode(null);
+	private MCTSNode root;
 
 	private Move bestMove(Role role, MachineState state) throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
+		root = new MCTSNode(null);
 		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
 		Move action = moves.get(0);
-		int score = 0;
-
 		if(moves.size() == 1)
 			return moves.get(0);
 
-		for (int i = 0; i < moves.size(); i++) {
-			int result = minScore(role, moves.get(i), state, 0);
-			if (result > score) {
-				score = result;
-				action = moves.get(i);
-			}
+		for (Move move: moves) {
+			if (System.currentTimeMillis() > timeLimit) { return action; }
+			//generate child for every move
+			MCTSNode child = new MCTSNode(root,move,state);
+			child.visits++;
+			child.score = monteCarlo(role, state, probes);
+			root.children.add(child);
 		}
-		return action;
+		System.out.println(root.children);
+
+		while(System.currentTimeMillis() > timeLimit) {
+			MCTSNode start = explore(root); //now i have bottom node
+			expandNode(start); //now i have expanded node with children
+			simulate(start, role);
+		}
+
+		return root.bestChild(root).move;
+
 	}
 
-	private int maxScore(Role role, MachineState state, int level) throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
 
-		if (getStateMachine().findTerminalp(state))
-			return getStateMachine().getGoal(state, role);
-
-		if(level > maxLevel)
-			return monteCarlo(role, state, probes);
-
-
-		List<Move> moves = getStateMachine().getLegalMoves(state, role);
-		int score = 0;
-
-		for (int i = 0; i < moves.size(); i++) {
-			int result = minScore(role, moves.get(i), state, level+1);
-			if (result == 100)
-				return result;
-			if (result > score)
-				score = result;
+	private MCTSNode explore(MCTSNode node) {
+		MCTSNode curr = node;
+		while(!curr.children.isEmpty()) {
+			curr = curr.selectChild(curr);
 		}
-		return score;
+		return curr;
 	}
-
-	private int minScore(Role role, Move move, MachineState state, int level) throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
-		List<List<Move>> jointMoves = getStateMachine().getLegalJointMoves(state, role, move);
-		int score = 100;
-		for (int i = 0; i < jointMoves.size(); i++) {
-			MachineState newState = getStateMachine().getNextState(state, jointMoves.get(i));
-			int result = maxScore(role, newState, level);
-			if (result < score) {
-				score = result;
-			}
-		}
-		return score;
-	}
-
 
 	private void expandNode(MCTSNode node) throws MoveDefinitionException, TransitionDefinitionException {
 		List<List<Move>> jointMoves = getStateMachine().getLegalJointMoves(node.state, getRole(), node.move);
@@ -131,6 +114,8 @@ public class MonteCarloTreeSearch extends SampleGamer {
 	{
 		// We get the current start time
 		long start = System.currentTimeMillis();
+
+		timeLimit = timeout - 2000;
 
 		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
 
