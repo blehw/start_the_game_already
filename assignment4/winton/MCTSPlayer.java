@@ -23,49 +23,56 @@ public class MCTSPlayer extends SampleGamer {
 		expand(root);
 		while (System.currentTimeMillis() < timeLimit) {
 			//System.out.println(root.children.get(0).visits);
-			System.out.println("before select");
+			//System.out.println("before select");
 			MCTSNode node = select(root);
-			System.out.println("after select");
+			//System.out.println("after select");
 			if (node != root) {
 				if (!getStateMachine().findTerminalp(node.parent.state)) {
-					System.out.println("Oh no");
 					expand(node);
-					System.out.println("before montecarlo");
+					//System.out.println("before montecarlo");
 					double score = monteCarlo(role, node.state, probes);
-					System.out.println("after montecarlo");
-					backpropagate(node, score);
+					if (score != -1) {
+						//System.out.println("after montecarlo");
+						backpropagate(node, score);
+					}
 				}
 			} else {
-				System.out.println("Oh no");
 				expand(node);
-				System.out.println("before montecarlo");
+				//System.out.println("before montecarlo");
 				double score = monteCarlo(role, node.state, probes);
-				System.out.println("after montecarlo");
-				backpropagate(node, score);
+				//System.out.println("after montecarlo");
+				if (score != -1) {
+					backpropagate(node, score);
+				}
 			}
 		}
 		Move move = root.children.get(0).move;
 		double score = 0;
-		System.out.println("hello");
+		//System.out.println("hello");
 		for (int i = 0; i < root.children.size(); i++) {
-			System.out.println(root.children.get(i).parent.visits);
+			//System.out.println(root.children.get(i).parent.visits);
 			if (root.children.get(i).visits != 0) {
-				System.out.println("hi");
-				System.out.println(root.children.get(i).score / root.children.get(i).visits);
+				//System.out.println("hi");
+				//System.out.println(root.children.get(i).score / root.children.get(i).visits);
 				if (root.children.get(i).score / root.children.get(i).visits > score) {
 					move = root.children.get(i).move;
 					score = (root.children.get(i).score) / (root.children.get(i).visits);
-					System.out.println(score);
+					//System.out.println(score);
 				}
 			}
 		}
-		//System.out.println(score);
+		System.out.println(score);
 		return move;
 	}
 
 	private MCTSNode select(MCTSNode node) {
 		if (System.currentTimeMillis() > timeLimit) {
 			return null;
+		}
+		System.out.println(node);
+		if (getStateMachine().findTerminalp(node.state)) {
+			System.out.println("terminal");
+			return node;
 		}
 		if (node.visits == 0) {
 			return node;
@@ -85,6 +92,9 @@ public class MCTSPlayer extends SampleGamer {
 					result = node.children.get(i);
 				}
 			}
+		}
+		if (result == node) {
+			return node;
 		}
 		return select(result);
 	}
@@ -114,12 +124,12 @@ public class MCTSPlayer extends SampleGamer {
 	}
 
 	private void backpropagate(MCTSNode node, double score) {
-		System.out.println("p");
+		//System.out.println("p");
 		if (System.currentTimeMillis() > timeLimit) {
 			return;
 		}
 		node.visits = node.visits + 1;
-		System.out.println(node.visits);
+		//System.out.println(node.visits);
 		//System.out.println(score);
 		node.score = node.score + score;
 		if (node.parent != null) {
@@ -131,29 +141,41 @@ public class MCTSPlayer extends SampleGamer {
 	private double monteCarlo(Role role, MachineState state, double count) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		double total = 0;
 		for(int i = 0; i<count; i++) {
-			total += depthCharge(role, state);
+			double score = depthCharge(role, state);
+			if (score < 0) {
+				return -1;
+			}
+			total += score;
 		}
 		return total/count;
 	}
 
 	private double depthCharge(Role role, MachineState state) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		if (getStateMachine().findTerminalp(state)) {
+			try {
 			//System.out.println("State: " + state);
 			//System.out.println("Role: " + role);
-			double score = getStateMachine().findReward(role, state);
+				double score = getStateMachine().findReward(role, state);
 			//System.out.println("Score: " + score);
-			return score;
+				return score;
+			} catch (Exception e) {
+				return -1;
+			}
 		}
 
 		List<Move> moves = getStateMachine().getLegalMoves(state, role);
 		Move move = moves.get(new Random().nextInt(moves.size()));
 		List<List<Move>> jointMoves = getStateMachine().getLegalJointMoves(state, role, move);
-		List<Move> simMove = jointMoves.get(new Random().nextInt(jointMoves.size()));
+		List<Move> simMove = jointMoves.get(0);
 		MachineState newState = getStateMachine().getNextState(state, simMove);
 		if (getStateMachine().findTerminalp(newState)) {
-			double score = getStateMachine().findReward(role, state);
-			//System.out.println("Score: " + score);
-			return score;
+			try {
+				double score = getStateMachine().findReward(role, state);
+				//System.out.println("Score: " + score);
+				return score;
+			} catch (Exception e) {
+				return -1;
+			}
 		}
 		return depthCharge(role, newState);
 	}
