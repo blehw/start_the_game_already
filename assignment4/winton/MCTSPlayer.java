@@ -22,25 +22,18 @@ public class MCTSPlayer extends SampleGamer {
 		root = new MCTSNode(null, null, getCurrentState());
 		expand(root);
 		while (System.currentTimeMillis() < timeLimit) {
-			//System.out.println(root.children.get(0).visits);
-			//System.out.println("before select");
 			MCTSNode node = select(root);
-			//System.out.println("after select");
 			if (node != root) {
 				if (!getStateMachine().findTerminalp(node.parent.state)) {
 					expand(node);
-					//System.out.println("before montecarlo");
 					double score = monteCarlo(role, node.state, probes);
 					if (score != -1) {
-						//System.out.println("after montecarlo");
 						backpropagate(node, score);
 					}
 				}
 			} else {
 				expand(node);
-				//System.out.println("before montecarlo");
 				double score = monteCarlo(role, node.state, probes);
-				//System.out.println("after montecarlo");
 				if (score != -1) {
 					backpropagate(node, score);
 				}
@@ -48,16 +41,11 @@ public class MCTSPlayer extends SampleGamer {
 		}
 		Move move = root.children.get(0).move;
 		double score = 0;
-		//System.out.println("hello");
 		for (int i = 0; i < root.children.size(); i++) {
-			//System.out.println(root.children.get(i).parent.visits);
 			if (root.children.get(i).visits != 0) {
-				//System.out.println("hi");
-				//System.out.println(root.children.get(i).score / root.children.get(i).visits);
 				if (root.children.get(i).score / root.children.get(i).visits > score) {
 					move = root.children.get(i).move;
 					score = (root.children.get(i).score) / (root.children.get(i).visits);
-					//System.out.println(score);
 				}
 			}
 		}
@@ -69,7 +57,6 @@ public class MCTSPlayer extends SampleGamer {
 		if (System.currentTimeMillis() > timeLimit) {
 			return null;
 		}
-		//System.out.println(node);
 		if (getStateMachine().findTerminalp(node.state)) {
 			System.out.println("terminal");
 			return node;
@@ -126,16 +113,12 @@ public class MCTSPlayer extends SampleGamer {
 	}
 
 	private void backpropagate(MCTSNode node, double score) {
-		//System.out.println("p");
 		if (System.currentTimeMillis() > timeLimit) {
 			return;
 		}
 		node.visits = node.visits + 1;
-		//System.out.println(node.visits);
-		//System.out.println(score);
 		node.score = node.score + score;
 		if (node.parent != null) {
-			//System.out.println("hello");
 			backpropagate(node.parent, score);
 		}
 	}
@@ -155,10 +138,7 @@ public class MCTSPlayer extends SampleGamer {
 	private double depthCharge(Role role, MachineState state) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		if (getStateMachine().findTerminalp(state)) {
 			try {
-			//System.out.println("State: " + state);
-			//System.out.println("Role: " + role);
 				double score = getStateMachine().findReward(role, state);
-			//System.out.println("Score: " + score);
 				return score;
 			} catch (Exception e) {
 				return -1;
@@ -170,20 +150,6 @@ public class MCTSPlayer extends SampleGamer {
 		int rand = new Random().nextInt(jointMoves.size());
 		List<Move> simMove = jointMoves.get(rand);
 		MachineState newState = getStateMachine().getNextState(state, simMove);
-		/*
-		if (getStateMachine().findTerminalp(newState)) {
-			try {
-				double score = getStateMachine().findReward(role, state);
-				//System.out.println("Score: " + score);
-				if (score == 100) {
-					System.out.println("100");
-				}
-				return score;
-			} catch (Exception e) {
-				return -1;
-			}
-		}
-		*/
 		return depthCharge(role, newState);
 	}
 
@@ -197,15 +163,10 @@ public class MCTSPlayer extends SampleGamer {
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
 		// We get the current start time
-		//long start = System.currentTimeMillis();
 
 		timeLimit = timeout - 3000;
 
-		//List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
-
 		Move selection = bestMove(getRole(), getCurrentState());
-
-		//long stop = System.currentTimeMillis();
 
 		/**
 		 * These are functions used by other parts of the GGP codebase
@@ -213,7 +174,6 @@ public class MCTSPlayer extends SampleGamer {
 		 * moves, selection, stop and start defined in the same way as
 		 * this example, and copy-paste these two lines in your player
 		 */
-		//notifyObservers(new GamerSelectedMoveEvent(moves, selection, stop - start));
 		return selection;
 	}
 
