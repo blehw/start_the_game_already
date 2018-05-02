@@ -74,7 +74,7 @@ public class MCTSPlayer extends SampleGamer {
 	}
 
 	private double selectfn(MCTSNode node) {
-		double C = 20;
+		double C = 50;
 		return node.score/node.visits + C * Math.sqrt(2*Math.log(node.parent.visits)/node.visits);
 	}
 
@@ -110,15 +110,22 @@ public class MCTSPlayer extends SampleGamer {
 	private double monteCarlo(Role role, MachineState state, double count) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		double total = 0;
 		for(int i = 0; i<count; i++) {
-			double score = depthCharge(role, state);
-			total += score;
+			double score = depthCharge(role, state, 0);
+			if (score == -1) {
+				total = total - (probes * 100);
+			} else {
+				total += score;
+			}
 		}
 		return total/count;
 	}
 
-	private double depthCharge(Role role, MachineState state) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
+	private double depthCharge(Role role, MachineState state, int level) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		if (getStateMachine().findTerminalp(state)) {
 			double score = getStateMachine().findReward(role, state);
+			if (level < 1 && score <= 0) {
+				return -1;
+			}
 			return score;
 		}
 		List<Move> moves = getStateMachine().getLegalMoves(state, role);
@@ -127,7 +134,7 @@ public class MCTSPlayer extends SampleGamer {
 		int rand = new Random().nextInt(jointMoves.size());
 		List<Move> simMove = jointMoves.get(rand);
 		MachineState newState = getStateMachine().getNextState(state, simMove);
-		return depthCharge(role, newState);
+		return depthCharge(role, newState, level+1);
 	}
 
 	/**
