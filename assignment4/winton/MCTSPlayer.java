@@ -19,7 +19,6 @@ public class MCTSPlayer extends SampleGamer {
 
 	private Move bestMove(Role role, MachineState state) throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
 		root = new MCTSNode(null, null, getCurrentState());
-		expand(root);
 		while (System.currentTimeMillis() < timeLimit) {
 			MCTSNode node = select(root);
 			expand(node);
