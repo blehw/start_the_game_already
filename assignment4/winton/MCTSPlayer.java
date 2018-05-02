@@ -166,7 +166,8 @@ public class MCTSPlayer extends SampleGamer {
 		List<Move> moves = getStateMachine().getLegalMoves(state, role);
 		Move move = moves.get(new Random().nextInt(moves.size()));
 		List<List<Move>> jointMoves = getStateMachine().getLegalJointMoves(state, role, move);
-		List<Move> simMove = jointMoves.get(0);
+		int rand = new Random().nextInt(jointMoves.size());
+		List<Move> simMove = jointMoves.get(rand);
 		MachineState newState = getStateMachine().getNextState(state, simMove);
 		if (getStateMachine().findTerminalp(newState)) {
 			try {
