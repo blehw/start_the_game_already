@@ -3,6 +3,7 @@ package Assignment4;
 import java.util.List;
 import java.util.Random;
 
+import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
 import org.ggp.base.player.gamer.statemachine.sample.SampleGamer;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
@@ -109,6 +110,9 @@ public class MCTSPlayer extends SampleGamer {
 	private double monteCarlo(Role role, MachineState state, double count) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		double total = 0;
 		for(int i = 0; i<count; i++) {
+			if (System.currentTimeMillis() > timeLimit) {
+				return total/count;
+			}
 			double score = depthCharge(role, state, 0);
 			if (score == -1) {
 				total = total - (probes * 100);
@@ -120,6 +124,12 @@ public class MCTSPlayer extends SampleGamer {
 	}
 
 	private double depthCharge(Role role, MachineState state, int level) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
+		if (System.currentTimeMillis() > timeLimit) {
+			return getStateMachine().getGoal(state, role);
+		}
+		if (level > 10) {
+			return getStateMachine().getGoal(state, role);
+		}
 		if (getStateMachine().findTerminalp(state)) {
 			double score = getStateMachine().findReward(role, state);
 			if (level < 1 && score <= 0) {
@@ -147,9 +157,11 @@ public class MCTSPlayer extends SampleGamer {
 	{
 		// We get the current start time
 
+		long start = System.currentTimeMillis();
 		timeLimit = timeout - 3000;
-
+		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
 		Move selection = bestMove(getRole(), getCurrentState());
+		long stop = System.currentTimeMillis();
 
 		/**
 		 * These are functions used by other parts of the GGP codebase
@@ -157,6 +169,7 @@ public class MCTSPlayer extends SampleGamer {
 		 * moves, selection, stop and start defined in the same way as
 		 * this example, and copy-paste these two lines in your player
 		 */
+		notifyObservers(new GamerSelectedMoveEvent(moves, selection, stop - start));
 		return selection;
 	}
 
