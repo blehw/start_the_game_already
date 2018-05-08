@@ -18,7 +18,7 @@ public class MCTSPlayerV2 extends SampleGamer {
 	private long timeLimit;
 	private long metaLimit;
 	private boolean gameStarted = false;
-	double C;
+	double C = 20;
 
 	private MCTSNode root;
 
@@ -37,6 +37,17 @@ public class MCTSPlayerV2 extends SampleGamer {
 			if (root.children.get(i).visits != 0) {
 				double nodeScore = root.children.get(i).score / root.children.get(i).visits;
 				System.out.println("nodeScore: "+ nodeScore);
+				if (nodeScore > score) {
+					move = root.children.get(i).move;
+					score = nodeScore;
+				}
+			}
+		}
+		if (score == 0) {
+			System.out.println("Reverting to mobility heuristic");
+			for (int i = 0; i < root.children.size(); i++) {
+				double nodeScore = ((double)getStateMachine().findLegals(role, root.children.get(i).state).size() / getStateMachine().findActions(role).size()) * 100;
+				System.out.println("mobScore: "+ nodeScore);
 				if (nodeScore > score) {
 					move = root.children.get(i).move;
 					score = nodeScore;
@@ -215,7 +226,7 @@ public class MCTSPlayerV2 extends SampleGamer {
 
 	@Override
 	public void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-		metaLimit = timeout - 3000;
+		metaLimit = timeout - 50000;
 		List<Double> scores = new ArrayList<>();
 		Role role = getRole();
 		root = new MCTSNode(null, null, getCurrentState());
@@ -233,7 +244,10 @@ public class MCTSPlayerV2 extends SampleGamer {
 		for (int i = 0; i < scores.size(); i++) {
 			varSum = varSum + ((scores.get(i) - avg) * (scores.get(i) - avg));
 		}
-		C = Math.sqrt(varSum / (scores.size() - 1));
+		double variance = Math.sqrt(varSum / (scores.size() - 1));
+		if (!Double.isNaN(variance)) {
+			C = Math.sqrt(varSum / (scores.size() - 1));
+		}
 		System.out.println("C: " + C);
 	}
 
