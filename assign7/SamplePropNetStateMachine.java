@@ -50,6 +50,32 @@ public class SamplePropNetStateMachine extends StateMachine {
         }
     }
 
+    private boolean propMarkP(Proposition p)
+    {
+    	if(p.getName().toString() == "base")
+    		return p.getValue();
+
+    	else if(p.getName().toString() == "input")
+    		return p.getValue();
+
+    	else if(p.getName().toString() == "view")
+    	{
+    		assert p.getInputs().size() == 1;
+    		if((Proposition)p.getSingleInput() != null)
+    		{
+    			propMarkP((Proposition)p.getSingleInput());
+    		}
+    		return false;
+    	}
+
+		else
+		{
+			System.out.println("NO PROPOSITION MARKINGS WAS TRUE. Check function propMarkP ");
+			return false;
+		}
+
+    }
+
     public void markBases(MachineState state) {
     	for (GdlSentence s : propNet.getBasePropositions().keySet())
         {
