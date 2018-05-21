@@ -1,276 +1,278 @@
-package org.ggp.base.util.statemachine.implementation.propnet;
+package org.ggp.base.player.gamer.statemachine;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.ggp.base.util.gdl.grammar.Gdl;
-import org.ggp.base.util.gdl.grammar.GdlConstant;
-import org.ggp.base.util.gdl.grammar.GdlRelation;
-import org.ggp.base.util.gdl.grammar.GdlSentence;
-import org.ggp.base.util.propnet.architecture.Component;
-import org.ggp.base.util.propnet.architecture.PropNet;
-import org.ggp.base.util.propnet.architecture.components.Proposition;
-import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
+import org.ggp.base.player.gamer.Gamer;
+import org.ggp.base.player.gamer.exception.AbortingException;
+import org.ggp.base.player.gamer.exception.MetaGamingException;
+import org.ggp.base.player.gamer.exception.MoveSelectionException;
+import org.ggp.base.player.gamer.exception.StoppingException;
+import org.ggp.base.util.gdl.grammar.GdlTerm;
+import org.ggp.base.util.logging.GamerLogger;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.cache.CachedStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
-import org.ggp.base.util.statemachine.implementation.prover.query.ProverQueryBuilder;
+import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 
-@SuppressWarnings("unused")
-public class SamplePropNetStateMachine extends StateMachine {
-    /** The underlying proposition network  */
-    private PropNet propNet;
-    /** The topological ordering of the propositions */
-    private List<Proposition> ordering;
-    /** The player roles */
-    private List<Role> roles;
-
-    /**
-     * Initializes the PropNetStateMachine. You should compute the topological
-     * ordering here. Additionally you may compute the initial state here, at
-     * your discretion.
-     */
-    @Override
-    public void initialize(List<Gdl> description) {
-        try {
-            propNet = OptimizingPropNetFactory.create(description);
-            roles = propNet.getRoles();
-            ordering = getOrdering();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private boolean propMarkP(Proposition p)
-    {
-    	if(p.getName().toString() == "base")
-    		return p.getValue();
-
-    	else if(p.getName().toString() == "input")
-    		return p.getValue();
-
-    	else if(p.getName().toString() == "view")
-    	{
-    		assert p.getInputs().size() == 1;
-    		if((Proposition)p.getSingleInput() != null)
-    		{
-    			propMarkP((Proposition)p.getSingleInput());
-    		}
-    		return false;
-    	}
-
-		else
-		{
-			System.out.println("NO PROPOSITION MARKINGS WAS TRUE. Check function propMarkP ");
-			return false;
-		}
-
-    }
-
-    public void markBases(MachineState state) {
-    	for (GdlSentence s : propNet.getBasePropositions().keySet())
-        {
-    		if (state.getContents().contains(s)) {
-    			propNet.getBasePropositions().get(s).setValue(true);
-            } else {
-            	propNet.getBasePropositions().get(s).setValue(false);
-            }
-        }
-    }
-	
-    public void markActions(MachineState state) {
-    	for (GdlSentence s : propNet.getInputPropositions().keySet()) {
-    		if (state.getContents().contains(s)) {
-    			propNet.getBasePropositions().get(s).setValue(true);
-            } else {
-            	propNet.getBasePropositions().get(s).setValue(false);
-            }
-        }
-    }
-
-    public void clearPropNet(PropNet p) {
-    	for (GdlSentence s : propNet.getInputPropositions().keySet()) {
-    		propNet.getBasePropositions().get(s).setValue(false);
-        }
-    }
+/**
+ * The base class for Gamers that rely on representing games as state machines.
+ * Almost every player should subclass this class, since it provides the common
+ * methods for interpreting the match history as transitions in a state machine,
+ * and for keeping an up-to-date view of the current state of the game.
+ *
+ * See @SimpleSearchLightGamer, @HumanGamer, and @RandomGamer for examples.
+ *
+ * @author evancox
+ * @author Sam
+ */
+public abstract class StateMachineGamer extends Gamer
+{
+    // =====================================================================
+    // First, the abstract methods which need to be overridden by subclasses.
+    // These determine what state machine is used, what the gamer does during
+    // metagaming, and how the gamer selects moves.
 
     /**
-     * Computes if the state is terminal. Should return the value
-     * of the terminal proposition for the state.
-     */
-    @Override
-    public boolean isTerminal(MachineState state) {
-        // TODO: Compute whether the MachineState is terminal.
-    	markBases(state);
-        return propNet.getTerminalProposition().getSingleInput().getValue();
-    }
-
-    /**
-     * Computes the goal for a role in the current state.
-     * Should return the value of the goal proposition that
-     * is true for that role. If there is not exactly one goal
-     * proposition true for that role, then you should throw a
-     * GoalDefinitionException because the goal is ill-defined.
-     */
-    @Override
-    public int getGoal(MachineState state, Role role)
-            throws GoalDefinitionException {
-        // TODO: Compute the goal for role in state.
-        return -1;
-    }
-
-    /**
-     * Returns the initial state. The initial state can be computed
-     * by only setting the truth value of the INIT proposition to true,
-     * and then computing the resulting state.
-     */
-    @Override
-    public MachineState getInitialState() {
-        // TODO: Compute the initial state.
-        return null;
-    }
-
-    /**
-     * Computes all possible actions for role.
-     */
-    @Override
-    public List<Move> findActions(Role role)
-            throws MoveDefinitionException {
-        // TODO: Compute legal moves.
-        return null;
-    }
-
-    /**
-     * Computes the legal moves for role in state.
-     */
-    @Override
-    public List<Move> getLegalMoves(MachineState state, Role role)
-            throws MoveDefinitionException {
-        // TODO: Compute legal moves.
-        return null;
-    }
-
-    /**
-     * Computes the next state given state and the list of moves.
-     */
-    @Override
-    public MachineState getNextState(MachineState state, List<Move> moves)
-            throws TransitionDefinitionException {
-        // TODO: Compute the next state.
-        return null;
-    }
-
-    /**
-     * This should compute the topological ordering of propositions.
-     * Each component is either a proposition, logical gate, or transition.
-     * Logical gates and transitions only have propositions as inputs.
-     *
-     * The base propositions and input propositions should always be exempt
-     * from this ordering.
-     *
-     * The base propositions values are set from the MachineState that
-     * operations are performed on and the input propositions are set from
-     * the Moves that operations are performed on as well (if any).
-     *
-     * @return The order in which the truth values of propositions need to be set.
-     */
-    public List<Proposition> getOrdering()
-    {
-        // List to contain the topological ordering.
-        List<Proposition> order = new LinkedList<Proposition>();
-
-        // All of the components in the PropNet
-        List<Component> components = new ArrayList<Component>(propNet.getComponents());
-
-        // All of the propositions in the PropNet.
-        List<Proposition> propositions = new ArrayList<Proposition>(propNet.getPropositions());
-
-        // TODO: Compute the topological ordering.
-
-        return order;
-    }
-
-    /* Already implemented for you */
-    @Override
-    public List<Role> getRoles() {
-        return roles;
-    }
-
-    /* Helper methods */
-
-    /**
-     * The Input propositions are indexed by (does ?player ?action).
-     *
-     * This translates a list of Moves (backed by a sentence that is simply ?action)
-     * into GdlSentences that can be used to get Propositions from inputPropositions.
-     * and accordingly set their values etc.  This is a naive implementation when coupled with
-     * setting input values, feel free to change this for a more efficient implementation.
-     *
-     * @param moves
+     * Defines which state machine this gamer will use.
      * @return
      */
-    private List<GdlSentence> toDoes(List<Move> moves)
-    {
-        List<GdlSentence> doeses = new ArrayList<GdlSentence>(moves.size());
-        Map<Role, Integer> roleIndices = getRoleIndices();
+    public abstract StateMachine getInitialStateMachine();
 
-        for (int i = 0; i < roles.size(); i++)
-        {
-            int index = roleIndices.get(roles.get(i));
-            doeses.add(ProverQueryBuilder.toDoes(roles.get(i), moves.get(index)));
-        }
-        return doeses;
+    /**
+     * Defines the metagaming action taken by a player during the START_CLOCK
+     * @param timeout time in milliseconds since the era when this function must return
+     * @throws TransitionDefinitionException
+     * @throws MoveDefinitionException
+     * @throws GoalDefinitionException
+     */
+    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException;
+
+    /**
+     * Defines the algorithm that the player uses to select their move.
+     * @param timeout time in milliseconds since the era when this function must return
+     * @return Move - the move selected by the player
+     * @throws TransitionDefinitionException
+     * @throws MoveDefinitionException
+     * @throws GoalDefinitionException
+     */
+    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException;
+
+    /**
+     * Defines any actions that the player takes upon the game cleanly ending.
+     */
+    public abstract void stateMachineStop();
+
+    /**
+     * Defines any actions that the player takes upon the game abruptly ending.
+     */
+    public abstract void stateMachineAbort();
+
+    // =====================================================================
+    // Next, methods which can be used by subclasses to get information about
+    // the current state of the game, and tweak the state machine on the fly.
+
+	/**
+	 * Returns the current state of the game.
+	 */
+	public final MachineState getCurrentState()
+	{
+		return currentState;
+	}
+
+	/**
+	 * Returns the role that this gamer is playing as in the game.
+	 */
+	public final Role getRole()
+	{
+		return role;
+	}
+
+	/**
+	 * Returns the state machine.  This is used for calculating the next state and other operations, such as computing
+	 * the legal moves for all players, whether states are terminal, and the goal values of terminal states.
+	 */
+	public final StateMachine getStateMachine()
+	{
+		return stateMachine;
+	}
+
+    /**
+     * Cleans up the role, currentState and stateMachine. This should only be
+     * used when a match is over, and even then only when you really need to
+     * free up resources that the state machine has tied up. Currently, it is
+     * only used in the Proxy, for players designed to run 24/7.
+     */
+    protected final void cleanupAfterMatch() {
+        role = null;
+        currentState = null;
+        stateMachine = null;
+        setMatch(null);
+        setRoleName(null);
     }
 
     /**
-     * Takes in a Legal Proposition and returns the appropriate corresponding Move
-     * @param p
-     * @return a PropNetMove
+     * Switches stateMachine to newStateMachine, playing through the match
+     * history to the current state so that currentState is expressed using
+     * a MachineState generated by the new state machine.
+     *
+     * This is not done in a thread-safe fashion with respect to the rest of
+     * the gamer, so be careful when using this method.
+     *
+     * @param newStateMachine the new state machine
      */
-    public static Move getMoveFromProposition(Proposition p)
-    {
-        return new Move(p.getName().get(1));
-    }
+    protected final void switchStateMachine(StateMachine newStateMachine) {
+        try {
+            MachineState newCurrentState = newStateMachine.getInitialState();
+            Role newRole = newStateMachine.getRoleFromConstant(getRoleName());
 
-    /**
-     * Helper method for parsing the value of a goal proposition
-     * @param goalProposition
-     * @return the integer value of the goal proposition
-     */
-    private int getGoalValue(Proposition goalProposition)
-    {
-        GdlRelation relation = (GdlRelation) goalProposition.getName();
-        GdlConstant constant = (GdlConstant) relation.get(1);
-        return Integer.parseInt(constant.toString());
-    }
-
-    /**
-     * A Naive implementation that computes a PropNetMachineState
-     * from the true BasePropositions.  This is correct but slower than more advanced implementations
-     * You need not use this method!
-     * @return PropNetMachineState
-     */
-    public MachineState getStateFromBase()
-    {
-        Set<GdlSentence> contents = new HashSet<GdlSentence>();
-        for (Proposition p : propNet.getBasePropositions().values())
-        {
-            p.setValue(p.getSingleInput().getValue());
-            if (p.getValue())
-            {
-                contents.add(p.getName());
+            // Attempt to run through the game history in the new machine
+            List<List<GdlTerm>> theMoveHistory = getMatch().getMoveHistory();
+            for(List<GdlTerm> nextMove : theMoveHistory) {
+                List<Move> theJointMove = new ArrayList<Move>();
+                for(GdlTerm theSentence : nextMove)
+                    theJointMove.add(newStateMachine.getMoveFromTerm(theSentence));
+                newCurrentState = newStateMachine.getNextStateDestructively(newCurrentState, theJointMove);
             }
 
+            // Finally, switch over if everything went well.
+            role = newRole;
+            currentState = newCurrentState;
+            stateMachine = newStateMachine;
+        } catch (Exception e) {
+            GamerLogger.log("GamePlayer", "Caught an exception while switching state machine!");
+            GamerLogger.logStackTrace("GamePlayer", e);
         }
-        return new MachineState(contents);
     }
+
+    /**
+     * A function that can be used when deserializing gamers, to bring a
+     * state machine gamer back to the internal state that it has when it
+     * arrives at a particular game state.
+     */
+	public final void resetStateFromMatch() {
+        stateMachine = getInitialStateMachine();
+        stateMachine.initialize(getMatch().getGame().getRules());
+        currentState = stateMachine.getMachineStateFromSentenceList(getMatch().getMostRecentState());
+        role = stateMachine.getRoleFromConstant(getRoleName());
+	}
+
+    // =====================================================================
+    // Finally, methods which are overridden with proper state-machine-based
+	// semantics. These basically wrap a state-machine-based view of the world
+	// around the ordinary metaGame() and selectMove() functions, calling the
+	// new stateMachineMetaGame() and stateMachineSelectMove() functions after
+	// doing the state-machine-related book-keeping.
+
+	/**
+	 * A wrapper function for stateMachineMetaGame. When the match begins, this
+	 * initializes the state machine and role using the match description, and
+	 * then calls stateMachineMetaGame.
+	 */
+	@Override
+	public final void metaGame(long timeout) throws MetaGamingException
+	{
+		try
+		{
+			stateMachine = getInitialStateMachine();
+			stateMachine.initialize(getMatch().getGame().getRules());
+			currentState = stateMachine.getInitialState();
+
+			role = stateMachine.getRoleFromConstant(getRoleName());
+			getMatch().appendState(currentState.getContents());
+
+			stateMachineMetaGame(timeout);
+		}
+		catch (Exception e)
+		{
+		    GamerLogger.logStackTrace("GamePlayer", e);
+			throw new MetaGamingException(e);
+		}
+	}
+
+	/**
+	 * A wrapper function for stateMachineSelectMove. When we are asked to
+	 * select a move, this advances the state machine up to the current state
+	 * and then calls stateMachineSelectMove to select a move based on that
+	 * current state.
+	 */
+	@Override
+	public final GdlTerm selectMove(long timeout) throws MoveSelectionException
+	{
+		try
+		{
+			stateMachine.doPerMoveWork();
+
+			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
+			if (lastMoves != null)
+			{
+				List<Move> moves = new ArrayList<Move>();
+				for (GdlTerm sentence : lastMoves)
+				{
+					moves.add(stateMachine.getMoveFromTerm(sentence));
+				}
+
+				currentState = stateMachine.getNextState(currentState, moves);
+				getMatch().appendState(currentState.getContents());
+			}
+
+			return stateMachineSelectMove(timeout).getContents();
+		}
+		catch (Exception e)
+		{
+		    GamerLogger.logStackTrace("GamePlayer", e);
+			throw new MoveSelectionException(e);
+		}
+	}
+
+	@Override
+	public void stop() throws StoppingException {
+		try {
+			stateMachine.doPerMoveWork();
+
+			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
+			if (lastMoves != null)
+			{
+				List<Move> moves = new ArrayList<Move>();
+				for (GdlTerm sentence : lastMoves)
+				{
+					moves.add(stateMachine.getMoveFromTerm(sentence));
+				}
+
+				currentState = stateMachine.getNextState(currentState, moves);
+				getMatch().appendState(currentState.getContents());
+				getMatch().markCompleted(stateMachine.getGoals(currentState));
+			}
+
+			stateMachineStop();
+		}
+		catch (Exception e)
+		{
+			GamerLogger.logStackTrace("GamePlayer", e);
+			throw new StoppingException(e);
+		}
+	}
+
+	@Override
+	public void abort() throws AbortingException {
+		try {
+			stateMachineAbort();
+		}
+		catch (Exception e)
+		{
+			GamerLogger.logStackTrace("GamePlayer", e);
+			throw new AbortingException(e);
+		}
+	}
+
+    // Internal state about the current state of the state machine.
+    private Role role;
+    private MachineState currentState;
+    private StateMachine stateMachine;
 }
