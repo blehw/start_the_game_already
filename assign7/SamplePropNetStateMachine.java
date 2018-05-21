@@ -86,6 +86,22 @@ public class SamplePropNetStateMachine extends StateMachine {
             }
         }
     }
+	
+    public void markActions(MachineState state) {
+    	for (GdlSentence s : propNet.getInputPropositions().keySet()) {
+    		if (state.getContents().contains(s)) {
+    			propNet.getBasePropositions().get(s).setValue(true);
+            } else {
+            	propNet.getBasePropositions().get(s).setValue(false);
+            }
+        }
+    }
+
+    public void clearPropNet(PropNet p) {
+    	for (GdlSentence s : propNet.getInputPropositions().keySet()) {
+    		propNet.getBasePropositions().get(s).setValue(false);
+        }
+    }
 
     /**
      * Computes if the state is terminal. Should return the value
