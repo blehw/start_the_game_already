@@ -131,7 +131,6 @@ public class SamplePropNetStateMachine extends StateMachine {
     }
 
 
-
     /**
      * Computes the next state given state and the list of moves.
      */
@@ -141,10 +140,7 @@ public class SamplePropNetStateMachine extends StateMachine {
     	markBases(state.getContents());
     	markActions(convertMoveToInput(moves));
     	Collection<Proposition> base_propositions = propNet.getBasePropositions().values();
-    	List<Boolean> next = new ArrayList<Boolean>();
     	return getStateFromBases(base_propositions);
-
-
     }
 
 
@@ -199,7 +195,6 @@ public class SamplePropNetStateMachine extends StateMachine {
 	       	Map<GdlSentence, Proposition> basePropositions = propNet.getBasePropositions();
 	    	Map<GdlSentence, Proposition> inputPropositions = propNet.getInputPropositions();
 	    	for (GdlSentence s : propNet.getBasePropositions().keySet()) {
-
 	    		if (p.getName().equals(s)) {
 	    			return p.getValue();
 	    		}
@@ -207,15 +202,12 @@ public class SamplePropNetStateMachine extends StateMachine {
 	    	for (GdlSentence s : propNet.getInputPropositions().keySet()) {
 	    		if (p.getName().equals(s)) {
 	    			return p.getValue();
-
 	    		}
-
 	        }
 	    	Set<Component> inputs = c.getInputs();
 	    	for (Component input: inputs) {
 	    		return propmarkp(input);
 	    	}
-
     	} else {
     		//WE HAVE A CONNECTIVE
     		if (type.contains("NOT")) {
@@ -226,7 +218,6 @@ public class SamplePropNetStateMachine extends StateMachine {
     		}
     		if (type.contains("OR")) {
     			return propmarkdisjunction(c);
-
     		}
     	}
     	return false;
@@ -236,9 +227,7 @@ public class SamplePropNetStateMachine extends StateMachine {
     private boolean propmarknegation(Component not) {
 
     	Component source = not.getSingleInput();
-
     	return !propmarkp(source);
-
     }
 
     private boolean propmarkconjunction(Component and) {
@@ -248,7 +237,6 @@ public class SamplePropNetStateMachine extends StateMachine {
       		if (!propmarkp(source)) { return false; }
       	}
     	return true;
-
     }
 
     private boolean propmarkdisjunction(Component or) {
@@ -258,8 +246,6 @@ public class SamplePropNetStateMachine extends StateMachine {
       		if (propmarkp(source)) { return false; }
       	}
     	return true;
-
-
     }
 
 
