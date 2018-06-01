@@ -110,13 +110,23 @@ public class SamplePropNetStateMachine extends StateMachine {
     @Override
     public List<Move> getLegalMoves(MachineState state, Role role)
             throws MoveDefinitionException {
-    	markBases(state.getContents());
-    	Set<Proposition> legals = new HashSet<Proposition>();
-    	legals = propNet.getLegalPropositions().get(role);
+    	markBases(state);
+    	List<Role> roles = getRoles();
+    	Map<Role, Set<Proposition>> legals = new HashMap<Role, Set<Proposition>>();
+    	search: {
+	    	for (int i = 0; i < roles.size(); i++) {
+	    		if (role.getName() == roles.get(i).getName()) {
+	    			//System.out.println("Hey");
+	    			legals = propNet.getLegalPropositions();
+	    			break search;
+	    		}
+	    	}
+    	}
     	List<Move> moves = new ArrayList<Move>();
-    	for (Proposition p : legals) {
-    		Component c = (Component)p;
-    		if (propmarkp(c)) {
+    	Set<Proposition> legalMoves = new HashSet<Proposition>();
+    	legalMoves = legals.get(role);
+    	for (Proposition p : legalMoves) {
+    		if (propMarkP(p)) {
     			moves.add(getMoveFromProposition(p));
     		}
     	}
