@@ -8,6 +8,7 @@ import org.ggp.base.player.gamer.statemachine.sample.SampleGamer;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
+import org.ggp.base.util.statemachine.StateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
@@ -15,8 +16,6 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class MCTSPlayerV3 extends SampleGamer {
 	final int probes = 10;
 	private long timeLimit;
-	private long metaLimit;
-	private boolean gameStarted = false;
 	private boolean badState = false;
 	private boolean mobMode = false;
 	private boolean firstMove = true;
@@ -24,6 +23,7 @@ public class MCTSPlayerV3 extends SampleGamer {
 	private double C = 20;
 	private int charges = 0;
 	private long clock;
+	private StateMachine stateMachine;
 
 	private MCTSNode root = null;
 
@@ -32,22 +32,22 @@ public class MCTSPlayerV3 extends SampleGamer {
 			root = new MCTSNode(null, null, getCurrentState());
 			firstMove = false;
 		}
-		List<Move> moves = getStateMachine().getLegalMoves(state, role);
+		List<Move> moves = stateMachine.getLegalMoves(state, role);
 		if (moves.size() == 1) {
-			expand(root, 0);
+			expand(root);
 			MCTSNode newRoot = root.children.get(0);
 			newRoot.parent = null;
 			root = newRoot;
 			return moves.get(0);
 		}
 		MCTSNode nod = select(root);
-		expand(nod, 0);
+		expand(nod);
 		for (int i = 0; i < nod.children.size(); i++) {
-			expand(nod.children.get(i), 0);
+			expand(nod.children.get(i));
 		}
 		while (System.currentTimeMillis() < timeLimit) {
 			MCTSNode node = select(root);
-			expand(node, 0);
+			expand(node);
 			double score = monteCarlo(role, node.state, probes);
 			backpropagate(node, score, 0);
 		}
@@ -55,20 +55,34 @@ public class MCTSPlayerV3 extends SampleGamer {
 		MCTSNode newRoot = root.children.get(0);
 		double numSearched  = 0;
 		double score = 0;
+		double allMoves = stateMachine.findActions(role).size();
 		for (int i = 0; i < root.children.size(); i++) {
-			/*long time;
-			if (gameStarted) {
-				time = timeLimit;
-			} else {
-				time = metaLimit;
-			}*/
 			if (System.currentTimeMillis() > timeLimit - 2500) {
 				System.out.println("Child " + i);
 				System.out.println("Visits: " + root.children.get(i).visits);
 				if (root.children.get(i).visits != 0) {
 					numSearched++;
-					double nodeScore = root.children.get(i).score / root.children.get(i).visits;
-					//double nodeScore = getStateMachine().findReward(role, root.children.get(i).state);
+					/*
+					double moveP = 0;
+					for (int j = 0; j < root.children.get(i).children.size(); j++) {
+						//System.out.println(System.currentTimeMillis());
+						//System.out.println(timeLimit);
+						if (System.currentTimeMillis() < timeLimit + 1000) {
+							moveP += ((double)stateMachine.findLegals(role, root.children.get(i).children.get(j).state).size());
+						} else {
+							newRoot.parent = null;
+							root = newRoot;
+							mobMode = true;
+							//System.out.println("depthCharges: " + depthCharges);
+							System.out.println("bestScore: " + score);
+							return move;
+						}
+					}
+					moveP = moveP / (allMoves * root.children.get(i).children.size());
+					moveP = moveP * 20;
+					*/
+					double nodeScore = (root.children.get(i).score / root.children.get(i).visits);
+					//double nodeScore = stateMachine.findReward(role, root.children.get(i).state);
 					System.out.println("nodeScore: "+ nodeScore);
 					if (nodeScore > score) {
 						move = root.children.get(i).move;
@@ -79,7 +93,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 			} else {
 				newRoot.parent = null;
 				root = newRoot;
-				//System.out.println("depthCharges: " + depthCharges);
 				System.out.println("bestScore: " + score);
 				return move;
 			}
@@ -100,7 +113,7 @@ public class MCTSPlayerV3 extends SampleGamer {
 						//System.out.println(System.currentTimeMillis());
 						//System.out.println(timeLimit);
 						if (System.currentTimeMillis() < time) {
-							moveP += ((double)getStateMachine().findLegals(role, root.children.get(i).children.get(j).state).size() / getStateMachine().findActions(role).size());
+							moveP += ((double)stateMachine.findLegals(role, root.children.get(i).children.get(j).state).size());
 						} else {
 							newRoot.parent = null;
 							root = newRoot;
@@ -110,12 +123,14 @@ public class MCTSPlayerV3 extends SampleGamer {
 							return move;
 						}
 					}
-					double reward = getStateMachine().findReward(role, root.children.get(i).state);
+					moveP = moveP / (allMoves * root.children.get(i).children.size());
+					double reward = stateMachine.findReward(role, root.children.get(i).state);
 					double mobScore =  reward + moveP;
-					//System.out.println("moveP :" + moveP);
-					if (mobScore > 100 && reward != 100) {
-						mobScore = 99;
+					double nodeScore = root.children.get(i).score / root.children.get(i).visits;
+					if (nodeScore < 50) {
+						mobScore = 0;
 					}
+					//System.out.println("moveP :" + moveP);
 					/*if (root.children.get(i).children.size() == 0) {
 						if (mobMode) {
 							expand(root.children.get(i), 4000);
@@ -124,7 +139,7 @@ public class MCTSPlayerV3 extends SampleGamer {
 						}
 					}
 					for (int k = 0; k < root.children.get(i).children.size(); k++) {
-						double nodeScore = ((double)getStateMachine().findLegals(role, root.children.get(i).children.get(k).state).size() / getStateMachine().findActions(role).size()) * 100;
+						double nodeScore = ((double)stateMachine.findLegals(role, root.children.get(i).children.get(k).state).size() / stateMachine.findActions(role).size()) * 100;
 						mobScore += nodeScore;
 					}*/
 					//mobScore = mobScore / root.children.get(i).children.size();
@@ -164,16 +179,10 @@ public class MCTSPlayerV3 extends SampleGamer {
 	}
 
 	private MCTSNode select(MCTSNode node) {
-		long time;
-		if (gameStarted) {
-			time = timeLimit;
-		} else {
-			time = metaLimit;
-		}
-		if (System.currentTimeMillis() > time) {
+		if (System.currentTimeMillis() > timeLimit) {
 			return node;
 		}
-		if (getStateMachine().findTerminalp(node.state)) {
+		if (stateMachine.findTerminalp(node.state)) {
 			return node;
 		}
 		if (node.visits == 0) {
@@ -187,7 +196,7 @@ public class MCTSPlayerV3 extends SampleGamer {
 		double score = 0;
 		MCTSNode result = node;
 		for (int i = 0; i < node.children.size(); i++) {
-			if (System.currentTimeMillis() > time) {
+			if (System.currentTimeMillis() > timeLimit) {
 				return result;
 			}
 			double newscore = selectfn(node.children.get(i));
@@ -206,51 +215,37 @@ public class MCTSPlayerV3 extends SampleGamer {
 		return node.score/node.visits + C * Math.sqrt(2*Math.log(node.parent.visits)/node.visits);
 	}
 
-	private void expand(MCTSNode node, long extraTime) throws MoveDefinitionException, TransitionDefinitionException {
-		long time;
-		if (gameStarted) {
-			time = timeLimit + extraTime;
-		} else {
-			time = metaLimit;
-		}
-		if (System.currentTimeMillis() > time) {
+	private void expand(MCTSNode node) throws MoveDefinitionException, TransitionDefinitionException {
+		if (System.currentTimeMillis() > timeLimit) {
 			return;
 		}
-		if (!getStateMachine().findTerminalp(node.state)) {
-			List<Move> moves = getStateMachine().getLegalMoves(node.state, getRole());
-			for (int i = 0; i < moves.size(); i++) {
-				if (System.currentTimeMillis() > time) {
+		if (node.children.size() != 0) {
+			return;
+		}
+		List<Move> moves = stateMachine.getLegalMoves(node.state, getRole());
+		for (int i = 0; i < moves.size(); i++) {
+			if (System.currentTimeMillis() > timeLimit) {
+				return;
+			}
+			List<List<Move>> jointMoves = stateMachine.getLegalJointMoves(node.state, getRole(), moves.get(i));
+			for (int j = 0; j < jointMoves.size(); j++) {
+				if (System.currentTimeMillis() > timeLimit) {
 					return;
 				}
-				List<List<Move>> jointMoves = getStateMachine().getLegalJointMoves(node.state, getRole(), moves.get(i));
-				for (int j = 0; j < jointMoves.size(); j++) {
-					if (System.currentTimeMillis() > time) {
-						return;
-					}
-					MachineState newState = getStateMachine().getNextState(node.state, jointMoves.get(j));
-					MCTSNode newNode = new MCTSNode(node, moves.get(i), newState);
-					newNode.parent = node;
-					node.children.add(newNode);
-				}
+				MachineState newState = stateMachine.getNextState(node.state, jointMoves.get(j));
+				MCTSNode newNode = new MCTSNode(node, moves.get(i), newState);
+				newNode.parent = node;
+				node.children.add(newNode);
 			}
 		}
 	}
 
 	private void backpropagate(MCTSNode node, double score, int level) {
-		long time;
-		if (gameStarted) {
-			time = timeLimit;
-		} else {
-			time = metaLimit;
-		}
-		if (System.currentTimeMillis() > time) {
+		if (System.currentTimeMillis() > timeLimit) {
 			return;
 		}
 		node.visits = node.visits + 1;
 		node.score = node.score + score;
-		if (node.parent != null && !badState) {
-			backpropagate(node.parent, score, level + 1);
-		}
 		if (badState) {
 			if (level < levelMax && node.parent != null) {
 				backpropagate(node.parent, score, level + 1);
@@ -260,65 +255,47 @@ public class MCTSPlayerV3 extends SampleGamer {
 					backpropagate(node.parent, 0, level + 1);
 				}
 			}
+		} else {
+			if (node.parent != null) {
+				backpropagate(node.parent, score, level + 1);
+			}
 		}
 	}
 
 	private double monteCarlo(Role role, MachineState state, double count) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		double total = 0;
 		for(int i = 0; i<count; i++) {
-			long time;
-			if (gameStarted) {
-				time = timeLimit;
-			} else {
-				time = metaLimit;
-			}
-			if (System.currentTimeMillis() > time) {
+			if (System.currentTimeMillis() > timeLimit) {
 				return total/count;
 			}
 			double score = depthCharge(role, state, 0);
 			charges++;
 			if (score < 0) {
-				//return -50;
 				total = total - (C * probes);
-				//return total;
 			} else {
 				total += score;
 			}
-			//depthCharges += 1;
 		}
 		return total/count;
 	}
 
 	private double depthCharge(Role role, MachineState state, int level) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
-		long time;
-		if (gameStarted) {
-			time = timeLimit;
-		} else {
-			time = metaLimit;
+		if (System.currentTimeMillis() > timeLimit) {
+			return stateMachine.getGoal(state, role);
 		}
-		if (System.currentTimeMillis() > time) {
-			return getStateMachine().getGoal(state, role);
-		}
-		/*if (level > 10) {
-			return getStateMachine().getGoal(state, role);
-		}*/
-		if (getStateMachine().findTerminalp(state)) {
-			double score = getStateMachine().findReward(role, state);
+		if (stateMachine.findTerminalp(state)) {
+			double score = stateMachine.findReward(role, state);
 			if (level < levelMax && score <= 0) {
 				badState = true;
-				//System.out.println(level);
-				//int neg = -1 - level;
-				//return neg;
 				return -1;
 			}
 			return score;
 		}
-		List<Move> moves = getStateMachine().getLegalMoves(state, role);
+		List<Move> moves = stateMachine.getLegalMoves(state, role);
 		Move move = moves.get(new Random().nextInt(moves.size()));
-		List<List<Move>> jointMoves = getStateMachine().getLegalJointMoves(state, role, move);
-		int rand = new Random().nextInt(jointMoves.size());
-		List<Move> simMove = jointMoves.get(rand);
-		MachineState newState = getStateMachine().getNextState(state, simMove);
+		List<List<Move>> jointMoves = stateMachine.getLegalJointMoves(state, role, move);
+		List<Move> simMove = jointMoves.get(new Random().nextInt(jointMoves.size()));
+		MachineState newState = stateMachine.getNextState(state, simMove);
 		return depthCharge(role, newState, level+1);
 	}
 
@@ -331,7 +308,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
-		gameStarted = true;
 		firstMove = true;
 		root = new MCTSNode(null, null, getCurrentState());
 		// We get the current start time
@@ -344,7 +320,8 @@ public class MCTSPlayerV3 extends SampleGamer {
 			timeLimit = timeout - (clock / 2);
 		}
 
-		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
+		stateMachine = getStateMachine();
+		List<Move> moves = stateMachine.getLegalMoves(getCurrentState(), getRole());
 		Move selection = bestMove(getRole(), getCurrentState());
 		long stop = System.currentTimeMillis();
 
