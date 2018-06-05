@@ -56,7 +56,7 @@ public class MCTSPlayerV3 extends SampleGamer {
 		MCTSNode newRoot = root.children.get(0);
 		double numSearched  = 0;
 		double score = 0;
-		double allMoves = stateMachine.findActions(role).size();
+		double allMoves = root.children.size();
 		for (int i = 0; i < root.children.size(); i++) {
 			if (System.currentTimeMillis() > timeLimit - 2500) {
 				System.out.println("Child " + i);
@@ -91,34 +91,22 @@ public class MCTSPlayerV3 extends SampleGamer {
 				}
 				if (System.currentTimeMillis() < time) {
 					double moveP = 0;
-					for (int j = 0; j < root.children.get(i).children.size(); j++) {
-						if (System.currentTimeMillis() < time) {
-							if (!stateMachine.findTerminalp(root.children.get(i).children.get(j).state)) {
-								moveP += ((double)stateMachine.findLegals(role, root.children.get(i).children.get(j).state).size());
-							}
-						} else {
-							newRoot.parent = null;
-							root = newRoot;
-							mobMode = true;
-							System.out.println("Charges: " + charges);
-							System.out.println("bestScore: " + score);
-							return move;
-						}
-					}
-					moveP = moveP / (allMoves * root.children.get(i).children.size());
+					MCTSNode parent = root.children.get(i);
+					moveP += parent.children.size();
+					moveP = moveP / (allMoves * allMoves);
 					double reward = stateMachine.findReward(role, root.children.get(i).state);
 					double mobScore =  reward + moveP;
-					System.out.println("mobScore: "+  mobScore);
+					System.out.println("mobScore " + i + ": " + mobScore);
 					if (mobScore > score) {
-						move = root.children.get(i).move;
+						move = parent.move;
 						score = mobScore;
-						newRoot = root.children.get(i);
+						newRoot = parent;
 					}
 					int flip = new Random().nextInt(2);
 					if (mobScore == score && flip == 0) {
-						move = root.children.get(i).move;
+						move = parent.move;
 						score = mobScore;
-						newRoot = root.children.get(i);
+						newRoot = parent;
 					}
 				} else {
 					newRoot.parent = null;
