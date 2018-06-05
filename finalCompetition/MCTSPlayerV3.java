@@ -18,7 +18,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 	private long timeLimit;
 	private boolean badState = false;
 	private boolean mobMode = false;
-	private boolean firstMove = true;
 	private int levelMax = 3;
 	private double C = 20;
 	private int charges = 0;
@@ -30,10 +29,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 
 	private Move bestMove(Role role, MachineState state) throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
 		charges = 0;
-		/*if (firstMove) {
-			root = new MCTSNode(null, null, getCurrentState());
-			firstMove = false;
-		}*/
 		List<Move> moves = stateMachine.getLegalMoves(state, role);
 		if (moves.size() == 1) {
 			expand(root);
@@ -265,7 +260,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 		} else {
 			int r = new Random().nextInt(node.moves.size());
 			Move move = node.moves.get(r);
-			List<Move> simMove = node.jointMoves.get(new Random().nextInt(node.jointMoves.size()));
 			for (int i = 0; i < node.children.size(); i++) {
 				if (node.moves.get(r).equals(move)) {
 					return depthCharge(role, node.children.get(i), level+1);
@@ -285,7 +279,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
-		firstMove = true;
 		root = new MCTSNode(null, null, getCurrentState());
 		// We get the current start time
 
@@ -335,7 +328,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 			double score = monteCarlo(getRole(), node, probes);
 			backpropagate(node, score, 0);
 		}
-		System.out.println("children: " + root.children);
 		Move move = root.children.get(0).move;
 		MCTSNode newRoot = root.children.get(0);
 		double score = 0;
@@ -359,33 +351,6 @@ public class MCTSPlayerV3 extends SampleGamer {
 				System.out.println("bestScore: " + score);
 			}
 		}
-		/*List<Gdl> description = getMatch().getGame().getRules();
-		PropNet pn;
-		try {
-			pn = OptimizingPropNetFactory.create(description);
-			System.out.println("PropNet Size: " + pn.getSize());
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}*/
-
-		/*metaLimit = timeout - ((timeout - System.currentTimeMillis())/ 2);
-		Role role = getRole();
-		double sum = 0;
-		double num = 0;
-		double varSum = 0;
-		root = new MCTSNode(null, null, getCurrentState());
-		while (System.currentTimeMillis() < metaLimit) {
-			double score = monteCarlo(role, root.state, probes);
-			backpropagate(root, score, 0);
-			sum += score;
-			num++;
-			varSum = varSum + ((score - (sum / num)) * (score - (sum / num)));
-		}
-		double variance = Math.sqrt(varSum / (num - 1));
-		if (!Double.isNaN(variance)) {
-			C = variance;
-		}
-		System.out.println("C: " + C);*/
 	}
 
 }
