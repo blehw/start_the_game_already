@@ -113,7 +113,9 @@ public class MCTSPlayerV3 extends SampleGamer {
 						//System.out.println(System.currentTimeMillis());
 						//System.out.println(timeLimit);
 						if (System.currentTimeMillis() < time) {
-							moveP += ((double)stateMachine.findLegals(role, root.children.get(i).children.get(j).state).size());
+							if (!stateMachine.findTerminalp(root.children.get(i).children.get(j).state)) {
+								moveP += ((double)stateMachine.findLegals(role, root.children.get(i).children.get(j).state).size());
+							}
 						} else {
 							newRoot.parent = null;
 							root = newRoot;
@@ -175,6 +177,7 @@ public class MCTSPlayerV3 extends SampleGamer {
 		root = newRoot;
 		System.out.println("Charges: " + charges);
 		System.out.println("bestScore: " + score);
+		charges = 0;
 		return move;
 	}
 
@@ -222,20 +225,22 @@ public class MCTSPlayerV3 extends SampleGamer {
 		if (node.children.size() != 0) {
 			return;
 		}
-		List<Move> moves = stateMachine.getLegalMoves(node.state, getRole());
-		for (int i = 0; i < moves.size(); i++) {
-			if (System.currentTimeMillis() > timeLimit) {
-				return;
-			}
-			List<List<Move>> jointMoves = stateMachine.getLegalJointMoves(node.state, getRole(), moves.get(i));
-			for (int j = 0; j < jointMoves.size(); j++) {
+		if (!getStateMachine().findTerminalp(node.state)) {
+			List<Move> moves = stateMachine.getLegalMoves(node.state, getRole());
+			for (int i = 0; i < moves.size(); i++) {
 				if (System.currentTimeMillis() > timeLimit) {
 					return;
 				}
-				MachineState newState = stateMachine.getNextState(node.state, jointMoves.get(j));
-				MCTSNode newNode = new MCTSNode(node, moves.get(i), newState);
-				newNode.parent = node;
-				node.children.add(newNode);
+				List<List<Move>> jointMoves = stateMachine.getLegalJointMoves(node.state, getRole(), moves.get(i));
+				for (int j = 0; j < jointMoves.size(); j++) {
+					if (System.currentTimeMillis() > timeLimit) {
+						return;
+					}
+					MachineState newState = stateMachine.getNextState(node.state, jointMoves.get(j));
+					MCTSNode newNode = new MCTSNode(node, moves.get(i), newState);
+					newNode.parent = node;
+					node.children.add(newNode);
+				}
 			}
 		}
 	}
