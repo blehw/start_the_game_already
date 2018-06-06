@@ -15,7 +15,9 @@ public class MCTSNode {
 	public ArrayList<MCTSNode> children;
 	public MCTSNode parent;
 	public List<Move> moves;
-	public List<List<Move>> jointMoves;
+	public List<List<Move>> jointMoves = new ArrayList<List<Move>>();
+	public boolean terminal = false;
+	public boolean badNode = false;
 
 	public MCTSNode(MCTSNode parent) {
 		this.parent = parent;
